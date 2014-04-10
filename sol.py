@@ -3,6 +3,10 @@ import random
 import itertools
 from timeit import default_timer
 
+import collections
+
+from patterns import *
+
 
 NUM_MOVES = 10000
 TIME_LIMIT = 28.0
@@ -144,46 +148,29 @@ class Simulator(object):
         self.score = self.prev_scores.pop()
         self.board = self.prev_boards.pop()
 
-def filter_move_candidates(candidates):
-    filtered_candidates = [
-        (m, c, a)
-        for m, c, a in candidates
-        if a - c > 0 or a >= 2 + DIAG]
 
-    if not filtered_candidates:
-        filtered_candidates = candidates
-    return filtered_candidates
+PatternInstance = collections.namedtuple(
+    'PatternInstance',
+    'idxs moves')
 
 
-def find_best_moves(depth, sim):
-    """Return pair (score, list of optimal moves)"""
+def instantiate_pattern(p):
+    result = []
+    for i in range(1, n - p.y2):
+        for j in range(1, n - p.x2):
+            idxs = [(y + i) * n + x + j for x, y in p.points]
+            moves = []
+            for x, y, vert in reversed(p.actions):
+                idx = (y + i) * n + x + j
+                moves.append(2 * idx + int(vert))
+            result.append(PatternInstance(idxs, moves))
 
-    best_score = [-1]
-    best_moves = []
+    return result
 
-    moves = []
 
-    def rec(depth):
-        if depth == 0:
-            s = sim.score + random.random()*0.01
-            if s > best_score[0]:
-                best_score[0] = s
-                best_moves[:] = moves
-            return
-        for move, c, a in filter_move_candidates(list(enum_moves(sim.board))):
-            delta = a - c
-            sim.make_move(move)
-            moves.append(move)
-            sim.score += 0.01 * delta
-            rec(depth - 1)
-            sim.score -= 0.01 * delta
-            moves.pop()
-            sim.undo_move()
-
-    rec(depth)
-
-    #assert len(best_moves) == depth
-    return best_score, best_moves
+def pattern_match(pi, board):
+    i1, i2, i3, i4 = pi.idxs
+    return board[i1] == board[i2] == board[i3] == board[i4]
 
 
 class SquareRemover(object):
@@ -196,7 +183,7 @@ class SquareRemover(object):
 
         colors = colors_
         n = len(board)
-        print>>sys.stderr, 'colors={}, n={}'.format(colors, n)
+        print>>sys.stderr, '# dict(type="size", n={}, colors={}) #'.format(n, colors)
         n += 2
         board = [9] * n + [int(c) for row in board for c in '9' + row + '9'] + [9] * n
         assert len(board) == n*n
@@ -205,20 +192,29 @@ class SquareRemover(object):
         result = []
         sim = Simulator(board, start_seed)
 
-        step = 1
-        for i in range(0, NUM_MOVES, step):
+        pattern_instances = []
+        for i in 1, 2, 3:
+            for p in gen_patterns(i):
+                pattern_instances.extend(instantiate_pattern(p))
+
+        print>>sys.stderr, len(pattern_instances), 'pattern instances'
+
+        while len(result) // 3 < NUM_MOVES:
             if default_timer() > start + TIME_LIMIT:
                 print>>sys.stderr, 'timeout!'
-                print>>sys.stderr, i, s, ms
+                print>>sys.stderr, len(result) // 3
                 break
-            depth = min(NUM_MOVES - i, step)
-            s, ms = find_best_moves(depth, sim)
-            if not ms:
-                print>>sys.stderr, 'something strange!'
-                break
-            if (i + 1) % 1000 == 0:
-                print>>sys.stderr, i, s, ms
-                sys.stderr.flush()
+            remaining = NUM_MOVES - len(result) // 3
+            ms = None
+            for pi in pattern_instances:
+                if pattern_match(pi, sim.board) and remaining >= len(pi.moves):
+                    ms = pi.moves
+                    break
+            else:
+                print>>sys.stderr, 'no match', len(result) // 3
+                move, _, _ = random.choice(list(enum_moves(sim.board)))
+                ms = [move]
+
             for move in ms:
                 sim.make_move(move)
                 result += [move // (2*n) - 1, move // 2 % n - 1, move % 2 + 1]
@@ -237,6 +233,10 @@ class SquareRemover(object):
 
 
 def main():
+    global TIME_LIMIT
+    if len(sys.argv) == 2:
+        TIME_LIMIT = float(sys.argv[1])
+
     global n
     colors = int(raw_input())
     n = int(raw_input())
