@@ -79,26 +79,40 @@ def enum_moves(board):
                 yield idx * 2 + 1, cut_cost, add_cost
 
 
+buffer = []
+
+def extend_buffer():
+    global buffer, _a
+    buffer.append(int(_a % colors))
+    _a = (_a * 48271) % 2147483647
+
+
 class Simulator(object):
-    def __init__(self, board, start_seed):
+    def __init__(self, board):
         self.score = 0
         self.board = board[:]
+        self.connections = 0.0
 
         self.prev_scores = []
         self.prev_boards = []
-
-        self.future = []
-        self.a = start_seed
+        self.prev_connections = []
 
         # To stabilize stuff
         self.make_move(None)
         self.prev_scores = []
         self.prev_boards = []
+        self.prev_connections = []
 
     def make_move(self, move):
         self.prev_scores.append(self.score)
         self.prev_boards.append(self.board)
+        self.prev_connections.append(self.connections)
         board = self.board[:]
+
+        def assign(idx, color):
+            self.connections -= connection_cost(board, idx, board[idx])
+            board[idx] = color
+            self.connections += connection_cost(board, idx, color)
 
         if move is None:
             i1 = 1
@@ -110,15 +124,17 @@ class Simulator(object):
             i1 = idx // n - 1
             j1 = idx % n - 1
             if move % 2 == 0:
-                t = board[idx]
-                board[idx] = board[idx + 1]
-                board[idx + 1] = t
+                c1 = board[idx]
+                c2 = board[idx + 1]
+                assign(idx, c2)
+                assign(idx + 1, c1)
                 i2 = i1 + 2
                 j2 = j1 + 3
             else:
-                t = board[idx]
-                board[idx] = board[idx + n]
-                board[idx + n] = t
+                c1 = board[idx]
+                c2 = board[idx + n]
+                assign(idx, c2)
+                assign(idx + n, c1)
                 i2 = i1 + 3
                 j2 = j1 + 2
 
@@ -127,15 +143,14 @@ class Simulator(object):
             if idx is None:
                 break
 
-            if len(self.future) <= 4 * self.score:
+            if len(buffer) <= 4 * self.score:
                 for _ in range(4):
-                    self.future.append(int(self.a % colors))
-                    self.a = (self.a * 48271) % 2147483647
+                    extend_buffer()
 
-            board[idx] = self.future[self.score * 4]
-            board[idx + 1] = self.future[self.score * 4 + 1]
-            board[idx + n] = self.future[self.score * 4 + 2]
-            board[idx + n + 1] = self.future[self.score * 4 + 3]
+            assign(idx, buffer[self.score * 4])
+            assign(idx + 1, buffer[self.score * 4 + 1])
+            assign(idx + n, buffer[self.score * 4 + 2])
+            assign(idx + n + 1, buffer[self.score * 4 + 3])
             self.score += 1
             i1 -= 1
             j1 -= 1
@@ -147,6 +162,7 @@ class Simulator(object):
     def undo_move(self):
         self.score = self.prev_scores.pop()
         self.board = self.prev_boards.pop()
+        self.connections = self.prev_connections.pop()
 
 
 PatternInstance = collections.namedtuple(
@@ -178,6 +194,7 @@ class SquareRemover(object):
     def playIt(colors_, board, start_seed):
         global colors
         global n
+        global _a
 
         start = default_timer()
 
@@ -188,9 +205,11 @@ class SquareRemover(object):
         board = [9] * n + [int(c) for row in board for c in '9' + row + '9'] + [9] * n
         assert len(board) == n*n
 
+        _a = start_seed
+
         random.seed(42)
         result = []
-        sim = Simulator(board, start_seed)
+        sim = Simulator(board)
 
         pattern_instances = []
         for i in 1, 2, 3:
