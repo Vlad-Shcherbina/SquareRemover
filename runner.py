@@ -34,6 +34,7 @@ def run_solution(command, seed):
             m = re.match(r'Score  = (\d+)$', line)
             if m is not None:
                 score = int(m.group(1))
+
             m = re.match(r'# (.*) #$', line)
             if m is not None:
                 dp = eval(m.group(1))
@@ -41,8 +42,12 @@ def run_solution(command, seed):
                 if dp.get('type') == 'size':
                     colors = dp['colors']
                     n = dp['n']
+            m = re.match(r'simulated score (\d+)$', line)
+            if m is not None:
+                simulated_score = int(m.group(1))
 
         assert score is not None, '\n' + out
+        assert score == simulated_score
 
         return RunResult(score, n, colors, data_points, default_timer() - start)
     except Exception as e:

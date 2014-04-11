@@ -1,7 +1,7 @@
+#include <cassert>
 #include <iostream>
 #include <string>
 #include <vector>
-#include <cassert>
 #include <cstdlib>
 #include <algorithm>
 #include <iterator>
@@ -40,6 +40,9 @@ Move pack_move(int y, int x, bool vert) {
 }
 
 
+class Undoer;
+
+
 struct State {
   vector<char> cells;
   int score;
@@ -72,27 +75,8 @@ struct State {
     return -1;
   }
 
-  void collapse() {
-    while (true) {
-      int idx = find_block();
-      if (idx == -1)
-        return;
-      cells[idx] = buffer[score * 4];
-      cells[idx + 1] = buffer[score * 4 + 1];
-      cells[idx + n] = buffer[score * 4 + 2];
-      cells[idx + n + 1] = buffer[score * 4 + 3];
-      score += 1;
-    }
-  }
-
-  void make_move(Move move) {
-    int idx = move & ~VERT;
-    int idx2 = idx + 1;
-    if (move & VERT)
-      idx2 = idx + n;
-    swap(cells[idx], cells[idx2]);
-    collapse();
-  }
+  void collapse(Undoer &undoer);
+  void make_move(Move move, Undoer &undoer);
 };
 
 std::ostream& operator<<(std::ostream &out, const State &s) {
@@ -103,6 +87,75 @@ std::ostream& operator<<(std::ostream &out, const State &s) {
   }
   out << "score = " << s.score << endl;
   return out;
+}
+
+
+struct Undoer {
+  State *state;
+  int score;
+  vector<int> change_history;
+
+  Undoer(State &state) : state(&state) {
+    score = state.score;
+  }
+
+  void record_two_changes(int idx1, int value1, int idx2, int value2) {
+    assert(idx1 >= 0 && idx1 < 512);
+    assert(value1 >= 0 && value1 < 8);
+    assert(idx2 >= 0 && idx2 < 512);
+    assert(value2 >= 0 && value2 < 8);
+    assert(idx1 != idx2);
+    change_history.push_back(
+        (idx1 * 8 + value1) * 4096 +
+        (idx2 * 8 + value2));
+  }
+
+  ~Undoer() {
+    for (int i = change_history.size() - 1; i >= 0; i--) {
+      int v = change_history[i];
+      assert(v >= 0 && v <= 4096 * 4096);
+      int idx1 = v / (8*4096);
+      int idx2 = v % 4096 / 8;
+      assert(idx1 < state->cells.size());
+      assert(idx2 < state->cells.size());
+      state->cells[idx1] = v / 4096 % 8;
+      state->cells[idx2] = v % 8;
+    }
+    state->score = score;
+  }
+};
+
+
+void State::collapse(Undoer &undoer) {
+  assert(undoer.state == this);
+  while (true) {
+    int idx = find_block();
+    if (idx == -1)
+      return;
+    auto *buf = &buffer[score * 4];
+    undoer.record_two_changes(
+        idx, cells[idx],
+        idx + 1, cells[idx + 1]);
+    undoer.record_two_changes(
+        idx + n, cells[idx + n],
+        idx + n + 1, cells[idx + n + 1]);
+    cells[idx] = buf[0];
+    cells[idx + 1] = buf[1];
+    cells[idx + n] = buf[2];
+    cells[idx + n + 1] = buf[3];
+    score += 1;
+  }
+}
+
+void State::make_move(Move move, Undoer &undoer) {
+  assert(undoer.state == this);
+  int idx = move & ~VERT;
+  int idx2 = idx + 1;
+  if (move & VERT)
+    idx2 = idx + n;
+  undoer.record_two_changes(idx, cells[idx], idx2, cells[idx2]);
+  swap(cells[idx], cells[idx2]);
+  collapse(undoer);
 }
 
 
@@ -117,7 +170,6 @@ public:
     for (string row : board) {
       assert(row.size() == board.size());
       state.cells.push_back(9);
-      //copy(row.begin(), row.end(), back_inserter(state.cells));
       for (int c : row)
         state.cells.push_back(c - '0');
       state.cells.push_back(9);
@@ -130,20 +182,40 @@ public:
       a = (a * (uint64_t)48271) % (uint64_t)2147483647;
     }
 
-    state.collapse();
-
+    State orig_state = state;
     vector<int> result;
+
+    {Undoer global_undoer(state);
+
+    state.collapse(global_undoer);
+
 
     for (int i = 0; i < NUM_MOVES; i++) {
       vector<Move> moves = state.possible_moves();
-      Move move = moves[rand() % moves.size()];
-      state.make_move(move);
 
-      result.push_back(move_y(move));
-      result.push_back(move_x(move));
-      result.push_back(move_dir(move));
+      Move best_move = moves[rand() % moves.size()];
+      int best_score = state.score;
+      for (Move m : moves) {
+        Undoer u(state);
+        state.make_move(m, u);
+        if (state.score > best_score) {
+          best_score = state.score;
+          best_move = m;
+        }
+      }
+
+      state.make_move(best_move, global_undoer);
+      result.push_back(move_y(best_move));
+      result.push_back(move_x(best_move));
+      result.push_back(move_dir(best_move));
     }
-    cerr << "simulated score = " << state.score << endl;
+
+    cerr << "simulated score " << state.score << endl;
+
+    } // global_undoer
+
+    assert(orig_state.cells == state.cells);
+
     return result;
   }
 };
