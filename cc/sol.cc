@@ -132,18 +132,30 @@ void State::make_move(Move move, Undoer &undoer) {
   if (move != -1) {
     int idx = move & ~VERT;
     int idx2 = idx + 1;
-    i1 = idx / n - 1;
-    j1 = idx % n - 1;
     if (move & VERT) {
       idx2 = idx + n;
-      i2 = i1 + 4;
-      j2 = j1 + 3;
-    } else {
-      i2 = i1 + 3;
-      j2 = j1 + 4;
     }
     undoer.record_two_changes(idx, cells[idx], idx2, cells[idx2]);
     swap(cells[idx], cells[idx2]);
+    if (move & VERT) {
+      if (cells[idx - n] != cells[idx] &&
+          cells[idx] != cells[idx + n] &&
+          cells[idx + n] != cells[idx + 2 * n])
+        return;
+      i1 = idx / n - 1;
+      j1 = idx % n - 1;
+      i2 = i1 + 4;
+      j2 = j1 + 3;
+    } else {
+      if (cells[idx - 1] != cells[idx] &&
+          cells[idx] != cells[idx + 1] &&
+          cells[idx + 1] != cells[idx + 2])
+        return;
+      i1 = idx / n - 1;
+      j1 = idx % n - 1;
+      i2 = i1 + 3;
+      j2 = j1 + 4;
+    }
   } else {
     i1 = j1 = 1;
     i2 = j2 = n - 1;
