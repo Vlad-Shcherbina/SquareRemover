@@ -60,22 +60,20 @@ struct State {
     return result;
   }
 
-  int find_block() {
-    for (int i = 1; i < n - 2; i++) {
-      for (int j = 1; j < n - 2; j++) {
+  int find_block(int i1, int j1, int i2, int j2) {
+    for (int i = i1; i < i2 - 1; i++) {
+      for (int j = j1; j < j2 - 1; j++) {
         int idx = i * n + j;
         char c = cells[idx];
         if (c == cells[idx + 1] &&
             c == cells[idx + n] &&
-            c == cells[idx + n + 1]) {
+            c == cells[idx + n + 1])
           return idx;
-        }
       }
     }
     return -1;
   }
 
-  void collapse(Undoer &undoer);
   void make_move(Move move, Undoer &undoer);
 };
 
@@ -126,10 +124,33 @@ struct Undoer {
 };
 
 
-void State::collapse(Undoer &undoer) {
+void State::make_move(Move move, Undoer &undoer) {
   assert(undoer.state == this);
+
+  int i1, j1, i2, j2;
+
+  if (move != -1) {
+    int idx = move & ~VERT;
+    int idx2 = idx + 1;
+    i1 = idx / n - 1;
+    j1 = idx % n - 1;
+    if (move & VERT) {
+      idx2 = idx + n;
+      i2 = i1 + 4;
+      j2 = j1 + 3;
+    } else {
+      i2 = i1 + 3;
+      j2 = j1 + 4;
+    }
+    undoer.record_two_changes(idx, cells[idx], idx2, cells[idx2]);
+    swap(cells[idx], cells[idx2]);
+  } else {
+    i1 = j1 = 1;
+    i2 = j2 = n - 1;
+  }
+
   while (true) {
-    int idx = find_block();
+    int idx = find_block(i1, j1, i2, j2);
     if (idx == -1)
       return;
     auto *buf = &buffer[score * 4];
@@ -144,18 +165,12 @@ void State::collapse(Undoer &undoer) {
     cells[idx + n] = buf[2];
     cells[idx + n + 1] = buf[3];
     score += 1;
-  }
-}
 
-void State::make_move(Move move, Undoer &undoer) {
-  assert(undoer.state == this);
-  int idx = move & ~VERT;
-  int idx2 = idx + 1;
-  if (move & VERT)
-    idx2 = idx + n;
-  undoer.record_two_changes(idx, cells[idx], idx2, cells[idx2]);
-  swap(cells[idx], cells[idx2]);
-  collapse(undoer);
+    if (i1 > 1) i1--;
+    if (j1 > 1) j1--;
+    if (i2 < n - 1) i2++;
+    if (j2 < n - 1) j2++;
+  }
 }
 
 
@@ -187,7 +202,7 @@ public:
 
     {Undoer global_undoer(state);
 
-    state.collapse(global_undoer);
+    state.make_move(-1, global_undoer);
 
 
     for (int i = 0; i < NUM_MOVES; i++) {
