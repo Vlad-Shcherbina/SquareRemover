@@ -1,3 +1,4 @@
+import sys
 import multiprocessing
 import runner
 import pickle
@@ -7,13 +8,14 @@ def worker(task):
     return runner.run_solution(*task)
 
 def main():
+    assert len(sys.argv) == 2
+    command = sys.argv[1]
+
     with open('by_problem_type.txt') as fin:
         by_problem_type = eval(fin.read())
 
     types = [(n, colors) for colors in (4, 5, 6) for n in range(8, 16 + 1)]
-    #types.reverse()
 
-    command = 'python -u sol.py 11.0'
     tasks = [(command, by_problem_type[t][0]) for t in types]
 
     map = multiprocessing.Pool(6).imap
