@@ -2,6 +2,8 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <map>
+#include <set>
 #include <cstdlib>
 #include <algorithm>
 #include <iterator>
@@ -135,6 +137,8 @@ void State::make_move(Move move, Undoer &undoer) {
     if (move & VERT) {
       idx2 = idx + n;
     }
+    if (cells[idx] == cells[idx2])
+      return;
     undoer.record_two_changes(idx, cells[idx], idx2, cells[idx2]);
     swap(cells[idx], cells[idx2]);
     if (move & VERT) {
@@ -186,10 +190,24 @@ void State::make_move(Move move, Undoer &undoer) {
 }
 
 
+#include "patterns.h"
+
+
 class SquareRemover{
 public:
   vector<int> playIt(int colors, vector<string> board, int start_seed) {
     ::n = board.size() + 2;
+
+    vector<PatternInstance> pis;
+    for (int i = 1; i <= 3; i++) {
+      PatternGenerator pg;
+      pg.generate(i);
+      cerr << pg.result.size() << " patterns" << endl;
+      for (auto p : pg.result)
+        p.instantiate(pis);
+    }
+    cerr << pis.size() << " pattern instances" << endl;
+
     State state;
     state.score = 0;
     state.cells = vector<char>(n, 9);
@@ -216,25 +234,37 @@ public:
 
     state.make_move(-1, global_undoer);
 
+    int remaining_moves = NUM_MOVES;
+    while (remaining_moves) {
+      vector<Move> best_moves;
+      float best_improvement = -1;
 
-    for (int i = 0; i < NUM_MOVES; i++) {
-      vector<Move> moves = state.possible_moves();
-
-      Move best_move = moves[rand() % moves.size()];
-      int best_score = state.score;
-      for (Move m : moves) {
-        Undoer u(state);
-        state.make_move(m, u);
-        if (state.score > best_score) {
-          best_score = state.score;
-          best_move = m;
+      for (const auto &pi : pis) {
+        if (pi.moves.size() > remaining_moves)
+          break;
+        if (pi.match(state)) {
+          Undoer u(state);
+          for (auto m : pi.moves)
+            state.make_move(m, u);
+          float d = 1.0 * (state.score - u.score) / pi.moves.size();
+          if (d > best_improvement) {
+            best_improvement = d;
+            best_moves = pi.moves;
+          }
         }
       }
+      if (best_moves.empty()) {
+        vector<Move> moves = state.possible_moves();
+        best_moves.push_back(moves[rand() % moves.size()]);
+      }
 
-      state.make_move(best_move, global_undoer);
-      result.push_back(move_y(best_move));
-      result.push_back(move_x(best_move));
-      result.push_back(move_dir(best_move));
+      for (Move best_move : best_moves) {
+        state.make_move(best_move, global_undoer);
+        result.push_back(move_y(best_move));
+        result.push_back(move_x(best_move));
+        result.push_back(move_dir(best_move));
+        remaining_moves--;
+      }
     }
 
     cerr << "simulated score " << state.score << endl;

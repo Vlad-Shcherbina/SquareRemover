@@ -1,10 +1,14 @@
 import subprocess
+import re
 
 p = subprocess.Popen('xsel --clipboard --input', shell=True, stdin=subprocess.PIPE)
 
 text = open('cc/sol.cc').read()
 text = text.replace('int main(', 'int main1(')
-text = text.replace('#include "pretty_printing.h"', open('cc/pretty_printing.h').read())
+
+def replacer(m):
+  return open('cc/' + m.group(1)).read()
+text = re.sub(r'#include "(.+\.h)"', replacer, text)
 
 p.communicate(text)
 ret = p.wait()
