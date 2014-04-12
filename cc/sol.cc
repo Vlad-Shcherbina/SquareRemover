@@ -8,14 +8,23 @@
 #include <algorithm>
 #include <iterator>
 #include <inttypes.h>
+#include <sys/time.h>
 
 #include "pretty_printing.h"
 
 using namespace std;
 
+double TIME_LIMIT = 27.0;
 const int NUM_MOVES = 10000;
 int n = -1;
 vector<int> buffer;
+
+
+double get_time() {
+    timeval tv;
+    gettimeofday(&tv, 0);
+    return tv.tv_sec + tv.tv_usec * 1e-6;
+}
 
 
 const int VERT = 1024;
@@ -210,6 +219,7 @@ void State::make_move(Move move, Undoer &undoer) {
 class SquareRemover{
 public:
   vector<int> playIt(int colors, vector<string> board, int start_seed) {
+    double start = get_time();
     ::n = board.size() + 2;
 
     vector<PatternInstance> pis;
@@ -290,6 +300,7 @@ public:
 
     assert(orig_state.cells == state.cells);
 
+    cerr << "# dict(time=" << get_time() - start << ") #" << endl;
     return result;
   }
 };

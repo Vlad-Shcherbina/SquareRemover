@@ -20,7 +20,8 @@ def list_stats(xs):
     sx2 = sum(x * x for x in xs)
     ave = 1.0 * sx / len(xs)
     sigma = sqrt((sx2 - 2 * sx * ave + len(xs) * ave * ave) / (len(xs) - 1))
-    return '{:.3f} &plusmn; <i>{:.3f}</i>'.format(ave, sigma)
+    return '<span title="{}..{}">{:.3f} &plusmn; <i>{:.3f}</i></span>'.format(
+        min(xs), max(xs), ave, sigma)
 
 
 def main():
@@ -72,7 +73,7 @@ def main():
                                 values[k].append(v)
                     scores.append(result.score)
                 fout.write('<b>score = {}</b>'.format(list_stats(scores)))
-                for k, xs in values.items():
+                for k, xs in sorted(values.items()):
                     fout.write('<br>{} = {}'.format(k, list_stats(xs)))
 
                 fout.write('</td>')
