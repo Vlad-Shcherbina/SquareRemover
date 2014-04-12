@@ -76,6 +76,20 @@ struct State {
     return -1;
   }
 
+  int naive_connections() const {
+    int result = 0;
+    for (int i = 1; i < n - 1; i++)
+      for (int j = 1; j < n - 2; j++) {
+        int idx = i * n + j;
+        if (cells[idx] == cells[idx + 1])
+          result++;
+        idx = j * n + i;
+        if (cells[idx] == cells[idx + n])
+          result++;
+      }
+    return result;
+  }
+
   void make_move(Move move, Undoer &undoer);
 };
 
@@ -244,9 +258,12 @@ public:
           break;
         if (pi.match(state)) {
           Undoer u(state);
+          int base_cons = state.naive_connections();
           for (auto m : pi.moves)
             state.make_move(m, u);
           float d = 1.0 * (state.score - u.score) / pi.moves.size();
+          if (colors != 6)
+            d += 0.001 * (state.naive_connections() - base_cons);
           if (d > best_improvement) {
             best_improvement = d;
             best_moves = pi.moves;
