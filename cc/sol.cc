@@ -57,6 +57,7 @@ class Undoer;
 struct State {
   vector<char> cells;
   int score;
+  int connections;
 
   friend std::ostream& operator<<(std::ostream &out, const State &s);
 
@@ -99,6 +100,33 @@ struct State {
     return result;
   }
 
+  void assign(int idx, char color) {
+    if (cells[idx] == color)
+      return;
+    char *p = &cells[idx];
+    if (p[0] == p[1])
+      connections--;
+    if (p[0] == p[-1])
+      connections--;
+    if (p[0] == p[n])
+      connections--;
+    if (p[0] == p[-n])
+      connections--;
+
+    p[0] = color;
+
+    if (p[0] == p[1])
+      connections++;
+    if (p[0] == p[-1])
+      connections++;
+    if (p[0] == p[n])
+      connections++;
+    if (p[0] == p[-n])
+      connections++;
+
+    //assert(connections == naive_connections());
+  }
+
   void make_move(Move move, Undoer &undoer);
 };
 
@@ -116,10 +144,12 @@ std::ostream& operator<<(std::ostream &out, const State &s) {
 struct Undoer {
   State *state;
   int score;
+  int connections;
   vector<int> change_history;
 
   Undoer(State &state) : state(&state) {
     score = state.score;
+    connections = state.connections;
   }
 
   void record_two_changes(int idx1, int value1, int idx2, int value2) {
@@ -145,6 +175,7 @@ struct Undoer {
       state->cells[idx2] = v % 8;
     }
     state->score = score;
+    state->connections = connections;
   }
 };
 
@@ -163,7 +194,9 @@ void State::make_move(Move move, Undoer &undoer) {
     if (cells[idx] == cells[idx2])
       return;
     undoer.record_two_changes(idx, cells[idx], idx2, cells[idx2]);
-    swap(cells[idx], cells[idx2]);
+    char t = cells[idx];
+    assign(idx, cells[idx2]);
+    assign(idx2, t);
     if (move & VERT) {
       if (cells[idx - n] != cells[idx] &&
           cells[idx] != cells[idx + n] &&
@@ -192,6 +225,7 @@ void State::make_move(Move move, Undoer &undoer) {
     int idx = find_block(i1, j1, i2, j2);
     if (idx == -1)
       return;
+    assert(score * 4 + 3 < buffer.size());
     auto *buf = &buffer[score * 4];
     undoer.record_two_changes(
         idx, cells[idx],
@@ -199,10 +233,10 @@ void State::make_move(Move move, Undoer &undoer) {
     undoer.record_two_changes(
         idx + n, cells[idx + n],
         idx + n + 1, cells[idx + n + 1]);
-    cells[idx] = buf[0];
-    cells[idx + 1] = buf[1];
-    cells[idx + n] = buf[2];
-    cells[idx + n + 1] = buf[3];
+    assign(idx, buf[0]);
+    assign(idx + 1, buf[1]);
+    assign(idx + n, buf[2]);
+    assign(idx + n + 1, buf[3]);
     score += 1;
 
     if (i1 > 1) i1--;
@@ -244,6 +278,7 @@ public:
       state.cells.push_back(9);
     }
     fill_n(back_inserter(state.cells), n, 9);
+    state.connections = state.naive_connections();
 
     uint64_t a = start_seed;
     for (int i = 0; i < NUM_MOVES * 4 * 10; i++) {
@@ -260,6 +295,8 @@ public:
 
     int remaining_moves = NUM_MOVES;
     while (remaining_moves) {
+      assert(state.connections == state.naive_connections());
+
       vector<Move> best_moves;
       float best_improvement = -1;
 
@@ -268,12 +305,12 @@ public:
           break;
         if (pi.match(state)) {
           Undoer u(state);
-          int base_cons = state.naive_connections();
+          int base_cons = state.connections;
           for (auto m : pi.moves)
             state.make_move(m, u);
           float d = 1.0 * (state.score - u.score) / pi.moves.size();
           if (colors != 6)
-            d += 0.001 * (state.naive_connections() - base_cons);
+            d += 0.001 * (state.connections - base_cons);
           if (d > best_improvement) {
             best_improvement = d;
             best_moves = pi.moves;
