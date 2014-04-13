@@ -250,6 +250,42 @@ void State::make_move(Move move, Undoer &undoer) {
 #include "patterns.h"
 
 
+struct Step {
+  float score;
+  int state_index;
+  const PatternInstance *pi;
+  int prev_step_index;
+};
+
+
+void insert_new_step(
+    const Step &new_step, const State &new_state,
+    vector<Step> &steps, vector<State> &states) {
+  assert(steps.size() == states.size());
+  struct Comp {
+    bool operator()(const Step &s1, const Step &s2) const {
+      return s1.score > s2.score;
+    }
+  };
+  auto insert_point = upper_bound(steps.begin(), steps.end(), new_step, Comp());
+
+  const int BEAM_WIDTH = 5;
+
+  if (steps.size() < BEAM_WIDTH) {
+    steps.insert(insert_point, new_step)->state_index = states.size();
+    states.push_back(new_state);
+  } else {
+    if (insert_point == steps.end())
+      return;
+    int t = steps.back().state_index;
+    copy_backward(insert_point, steps.end() - 1, steps.end());
+    *insert_point = new_step;
+    insert_point->state_index = t;
+    states[t] = new_state;
+  }
+}
+
+
 class SquareRemover{
 public:
   vector<int> playIt(int colors, vector<string> board, int start_seed) {
@@ -294,41 +330,60 @@ public:
 
     state.make_move(-1, global_undoer);
 
-    int remaining_moves = NUM_MOVES;
-    while (remaining_moves) {
-      assert(state.connections == state.naive_connections());
+    vector<vector<Step>> beam_steps(NUM_MOVES + 10);
+    vector<vector<State>> beam_states(NUM_MOVES + 10);
+    beam_states[0].push_back(state);
+    Step start_step;
+    start_step.score = 0.0;
+    start_step.state_index = 0;
+    start_step.pi = nullptr;
+    start_step.prev_step_index = -1;
+    beam_steps[0].push_back(start_step);
 
-      vector<Move> best_moves;
-      float best_improvement = -1;
+    for (int stage = 0; stage < NUM_MOVES; stage++) {
+      assert(beam_steps[stage].size() == beam_states[stage].size());
+      for (int i = 0; i < beam_steps[stage].size(); i++) {
+        State state = beam_states[stage][beam_steps[stage][i].state_index];
+        for (const auto &pi : pis) {
+          if (pi.match(state)) {
+            Undoer u(state);
+            for (auto m : pi.moves)
+              state.make_move(m, u);
+            Step new_step;
+            new_step.score = state.score;
+            new_step.pi = &pi;
+            new_step.prev_step_index = i;
 
-      for (const auto &pi : pis) {
-        if (pi.moves.size() > remaining_moves)
-          continue;
-        if (pi.match(state)) {
-          Undoer u(state);
-          int base_cons = state.connections;
-          for (auto m : pi.moves)
-            state.make_move(m, u);
-          float d = 1.0 * (state.score - u.score) / pi.moves.size();
-          if (colors != 6)
-            d += 0.001 * (state.connections - base_cons);
-          d += rand() % 1000 * 0.00001;
-          if (d > best_improvement) {
-            best_improvement = d;
-            best_moves = pi.moves;
+            int new_stage = stage + pi.moves.size();
+            insert_new_step(
+                new_step, state, beam_steps[new_stage], beam_states[new_stage]);
           }
         }
       }
+    }
+    cerr << "best results:" << endl;
+    for (auto step : beam_steps[NUM_MOVES]) {
+      cerr << step.score << endl;
+    }
 
-      assert(!best_moves.empty());
+    vector<Move> best_moves;
+    int stage = NUM_MOVES;
+    int idx = 0;
+    while (stage > 0) {
+      Step step = beam_steps[stage][idx];
+      copy(step.pi->moves.rbegin(), step.pi->moves.rend(),
+          back_inserter(best_moves));
+      stage -= step.pi->moves.size();
+      idx = step.prev_step_index;
+    }
+    reverse(best_moves.begin(), best_moves.end());
 
-      for (Move best_move : best_moves) {
-        state.make_move(best_move, global_undoer);
-        result.push_back(move_y(best_move));
-        result.push_back(move_x(best_move));
-        result.push_back(move_dir(best_move));
-        remaining_moves--;
-      }
+    assert(best_moves.size() == NUM_MOVES);
+    for (Move best_move : best_moves) {
+      state.make_move(best_move, global_undoer);
+      result.push_back(move_y(best_move));
+      result.push_back(move_x(best_move));
+      result.push_back(move_dir(best_move));
     }
 
     cerr << "simulated score " << state.score << endl;
