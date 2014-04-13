@@ -1,15 +1,9 @@
 import os
 import re
 import subprocess
-import collections
 from timeit import default_timer
 import multiprocessing
 import pprint
-
-
-RunResult = collections.namedtuple(
-    'RunResult',
-    'score n colors data_points time')
 
 
 def run_solution(command, seed):
@@ -49,14 +43,19 @@ def run_solution(command, seed):
         assert score is not None, '\n' + out
         assert score == simulated_score
 
-        return RunResult(score, n, colors, data_points, default_timer() - start)
+        return dict(
+            score=score,
+            n=n,
+            colors=colors,
+            data_points=data_points,
+            time=default_timer() - start)
     except Exception as e:
         raise Exception('seed={}, out={}'.format(seed, out)) from e
 
 
 def grouping_task(seed):
     sol = run_solution('python3 -u trivial.py', seed)
-    return seed, sol.n, sol.colors
+    return seed, sol['n'], sol['colors']
 
 
 def main():
@@ -68,7 +67,7 @@ def main():
         print(seed, n, colors)
 
     #pprint.pprint(by_problem_type)
-    with open('by_problem_type.txt', 'w') as fout:
+    with open('by_problem_type.txt1', 'w') as fout:
         pprint.pprint(by_problem_type, width=1000, stream=fout)
     shortest = min(map(len, by_problem_type.values()))
     print('shortest', shortest)

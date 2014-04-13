@@ -4,6 +4,7 @@ import flask
 import jinja2
 
 import run_db
+import render
 
 
 web_app = flask.Flask(__name__)
@@ -31,6 +32,7 @@ def run_details():
     run = run_db.Run(id)
     return flask.render_template(
         'run_details.html',
+        table=render.render_table(run.results),  # TODO: untangle
         run=run,
         debug=pprint.pformat((run.attrs, run.results)))
 
