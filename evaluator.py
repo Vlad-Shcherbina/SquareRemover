@@ -26,6 +26,7 @@ def main():
         for result in map(worker, tasks):
             print(result['colors'], result['n'], result['score'])
             run.add_result(result)
+            run.save()
 
 
 if __name__ == '__main__':
