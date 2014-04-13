@@ -344,13 +344,19 @@ public:
       assert(beam_steps[stage].size() == beam_states[stage].size());
       for (int i = 0; i < beam_steps[stage].size(); i++) {
         State state = beam_states[stage][beam_steps[stage][i].state_index];
+        bool had_proper_pis = false;
         for (const auto &pi : pis) {
+          if (had_proper_pis && pi.is_pseudo())
+            continue;
           if (pi.match(state)) {
+            if (!pi.is_pseudo())
+              had_proper_pis = true;
+
             Undoer u(state);
             for (auto m : pi.moves)
               state.make_move(m, u);
             Step new_step;
-            new_step.score = state.score;
+            new_step.score = state.score + 0.001 * state.connections;
             new_step.pi = &pi;
             new_step.prev_step_index = i;
 
