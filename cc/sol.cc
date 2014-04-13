@@ -293,8 +293,11 @@ public:
     double start = get_time();
     ::n = board.size() + 2;
 
+    int pi_depth = colors == 6 && board.size() <= 12 ? 3 : 2;
+    cerr << "# dict(pi_depth=" << pi_depth << ") #" << endl;
+
     vector<PatternInstance> pis;
-    for (int i = 1; i <= 3; i++) {
+    for (int i = 1; i <= pi_depth; i++) {
       PatternGenerator pg;
       pg.generate(i);
       cerr << pg.result.size() << " patterns" << endl;
