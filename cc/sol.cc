@@ -340,9 +340,12 @@ public:
     start_step.prev_step_index = -1;
     beam_steps[0].push_back(start_step);
 
+    int beam_area = 0;
+
     for (int stage = 0; stage < NUM_MOVES; stage++) {
       assert(beam_steps[stage].size() == beam_states[stage].size());
       for (int i = 0; i < beam_steps[stage].size(); i++) {
+        beam_area++;
         State state = beam_states[stage][beam_steps[stage][i].state_index];
         bool had_proper_pis = false;
         for (const auto &pi : pis) {
@@ -356,7 +359,10 @@ public:
             for (auto m : pi.moves)
               state.make_move(m, u);
             Step new_step;
-            new_step.score = state.score + 0.001 * state.connections;
+            if (had_proper_pis)
+              new_step.score = state.score + 0.001 * state.connections;
+            else
+              new_step.score = state.score + rand() % 1000 * 0.001;
             new_step.pi = &pi;
             new_step.prev_step_index = i;
 
@@ -367,6 +373,7 @@ public:
         }
       }
     }
+    cerr << "# dict(beam_area=" << beam_area << ") #" << endl;
     cerr << "best results:" << endl;
     for (auto step : beam_steps[NUM_MOVES]) {
       cerr << step.score << endl;
