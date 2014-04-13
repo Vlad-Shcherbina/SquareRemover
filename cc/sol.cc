@@ -264,6 +264,7 @@ public:
       for (auto p : pg.result)
         p.instantiate(pis);
     }
+    generate_pseudo_pis(pis);
     cerr << pis.size() << " pattern instances" << endl;
 
     State state;
@@ -302,7 +303,7 @@ public:
 
       for (const auto &pi : pis) {
         if (pi.moves.size() > remaining_moves)
-          break;
+          continue;
         if (pi.match(state)) {
           Undoer u(state);
           int base_cons = state.connections;
@@ -311,16 +312,15 @@ public:
           float d = 1.0 * (state.score - u.score) / pi.moves.size();
           if (colors != 6)
             d += 0.001 * (state.connections - base_cons);
+          d += rand() % 1000 * 0.00001;
           if (d > best_improvement) {
             best_improvement = d;
             best_moves = pi.moves;
           }
         }
       }
-      if (best_moves.empty()) {
-        vector<Move> moves = state.possible_moves();
-        best_moves.push_back(moves[rand() % moves.size()]);
-      }
+
+      assert(!best_moves.empty());
 
       for (Move best_move : best_moves) {
         state.make_move(best_move, global_undoer);

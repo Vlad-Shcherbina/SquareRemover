@@ -19,7 +19,25 @@ struct PatternInstance {
         c == s.cells[idxs[2]] &&
         c == s.cells[idxs[3]];
   }
+
+  bool is_pseudo() const {
+    return idxs[0] == 0;
+  }
 };
+
+
+void generate_pseudo_pis(vector<PatternInstance> &output) {
+  for (int i = 1; i < n - 1; i++)
+    for (int j = 1; j < n - 2; j++) {
+      int moves[] = {i * n + j, (j * n + i) | VERT};
+      for (int move : moves) {
+        PatternInstance pi;
+        pi.idxs[0] = pi.idxs[1] = pi.idxs[2] = pi.idxs[3] = 0;
+        pi.moves.push_back(move);
+        output.push_back(pi);
+      }
+    }
+}
 
 
 struct Pattern {
