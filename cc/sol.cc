@@ -260,8 +260,11 @@ struct Step {
 
 void insert_new_step(
     const Step &new_step, const State &new_state,
-    vector<Step> &steps, vector<State> &states) {
+    vector<Step> &steps, vector<State> &states,
+    int beam_width) {
   assert(steps.size() == states.size());
+  assert(beam_width >= 0);
+
   struct Comp {
     bool operator()(const Step &s1, const Step &s2) const {
       return s1.score > s2.score;
@@ -269,9 +272,7 @@ void insert_new_step(
   };
   auto insert_point = upper_bound(steps.begin(), steps.end(), new_step, Comp());
 
-  const int BEAM_WIDTH = 5;
-
-  if (steps.size() < BEAM_WIDTH) {
+  if (steps.size() < beam_width) {
     steps.insert(insert_point, new_step)->state_index = states.size();
     states.push_back(new_state);
   } else {
@@ -342,8 +343,21 @@ public:
 
     int beam_area = 0;
 
+    double t0 = get_time();
     for (int stage = 0; stage < NUM_MOVES; stage++) {
       assert(beam_steps[stage].size() == beam_states[stage].size());
+
+      int recommended_beam_widht = 10;
+      double t = get_time() - t0;
+      if (t > 0.1) {
+        recommended_beam_widht = rand() % 10 * 0.1 + 1.0 *
+            beam_area * (start + TIME_LIMIT - t - t0) / t / (NUM_MOVES - stage);
+        if (stage < 50 || stage % 500 == 0) {
+          cerr << stage << " beam width " << recommended_beam_widht << endl;
+        }
+        recommended_beam_widht = min(max(1, recommended_beam_widht), 100);
+      }
+
       for (int i = 0; i < beam_steps[stage].size(); i++) {
         beam_area++;
         State state = beam_states[stage][beam_steps[stage][i].state_index];
@@ -367,8 +381,14 @@ public:
             new_step.prev_step_index = i;
 
             int new_stage = stage + pi.moves.size();
+            int beam_width = recommended_beam_widht;
+            if (new_stage == NUM_MOVES)
+              beam_width = 1;
+            else if (new_stage > NUM_MOVES)
+              beam_width = 0;
             insert_new_step(
-                new_step, state, beam_steps[new_stage], beam_states[new_stage]);
+                new_step, state, beam_steps[new_stage], beam_states[new_stage],
+                beam_width);
           }
         }
       }
