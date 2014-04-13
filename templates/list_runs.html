@@ -1,0 +1,31 @@
+<table>
+<tr>
+  <th align="left">id</th>
+  <th align="left">git status</th>
+  <th align="right">run details</th>
+</tr>
+{% for run in runs %}
+<tr>
+  <td align="left">
+    <a href="{{ url_for('run_details') }}?id={{ run.id }}">
+      {{ run.id }}</a>
+  </td>
+  <td align="left">
+    {% if run.attrs.clean %}
+    clean
+    {% else %}
+    <span title="{{ run.attrs.diff_stat }}">dirty</span>
+    {% endif %}
+    {{ run.attrs.commit | truncate(7, killwords=True, end='')}}
+    (#{{ run.attrs.commit_number }}),
+    {{ run.attrs.branch }}
+  </td>
+  <td align="right">
+    {% if run.attrs.error %}
+      <span title="{{ run.attrs.error }}">error</span>
+    {% endif %}
+    {{ run.attrs.num_runs }} results
+  </td>
+</tr>
+{% endfor%}
+</table>
