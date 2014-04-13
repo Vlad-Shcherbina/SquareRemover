@@ -47,6 +47,14 @@ class RunRecorder(object):
         self.id = '{:x}'.format(int(t))
         self.filename = os.path.join(DIR, self.id)
 
+    def save(self):
+        with open(self.filename, 'w') as fout:
+            fout.write('[')
+            json.dump(self.attrs, fout, indent=4)
+            fout.write(',\n')
+            json.dump(self.results, fout)
+            fout.write(']')
+
     def add_result(self, result):
         self.attrs['num_runs'] += 1
         self.results.append(result)
@@ -55,8 +63,7 @@ class RunRecorder(object):
         if not os.path.exists(DIR):
             os.makedirs(DIR)
         assert not os.path.exists(self.filename)
-        with open(self.filename, 'w'):
-            pass
+        self.save()
         return self
 
     def __exit__(self, exc_type, exc_value, tb):
@@ -66,12 +73,7 @@ class RunRecorder(object):
             self.attrs['error'] = ''.join(
                 traceback.format_exception(exc_type, exc_value, tb))
 
-        with open(self.filename, 'w') as fout:
-            fout.write('[')
-            json.dump(self.attrs, fout, indent=4)
-            fout.write(',\n')
-            json.dump(self.results, fout)
-            fout.write(']')
+        self.save()
 
 
 class Run(object):
