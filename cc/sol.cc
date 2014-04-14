@@ -293,8 +293,9 @@ public:
     double start = get_time();
     ::n = board.size() + 2;
 
+    bool scarce = colors == 6 && board.size() <= 12;
     float pi_depth = 2;
-    if (colors == 6 && board.size() <= 12)
+    if (scarce)
       pi_depth = board.size() == 8 ? 2.75 : 2.5;
     cerr << "# dict(pi_depth=" << pi_depth << ") #" << endl;
 
@@ -383,8 +384,9 @@ public:
             for (auto m : pi.moves)
               state.make_move(m, u);
             Step new_step;
+            float conn_weight = scarce ? 0.001 : 0.2;
             if (had_proper_pis)
-              new_step.score = state.score + 0.001 * state.connections;
+              new_step.score = state.score + conn_weight * state.connections;
             else
               new_step.score = state.score + rand() % 1000 * 0.001;
             new_step.pi = &pi;
