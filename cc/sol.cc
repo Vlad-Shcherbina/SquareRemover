@@ -293,19 +293,26 @@ public:
     double start = get_time();
     ::n = board.size() + 2;
 
-    int pi_depth = colors == 6 && board.size() <= 12 ? 3 : 2;
+    float pi_depth = 2;
+    if (colors == 6 && board.size() <= 12)
+      pi_depth = board.size() == 8 ? 2.75 : 2.5;
     cerr << "# dict(pi_depth=" << pi_depth << ") #" << endl;
 
     vector<PatternInstance> pis;
-    for (int i = 1; i <= pi_depth; i++) {
+    for (int i = 1; i < pi_depth + 1; i++) {
       PatternGenerator pg;
       pg.generate(i);
       cerr << pg.result.size() << " patterns" << endl;
-      for (auto p : pg.result)
-        p.instantiate(pis);
+      for (auto p : pg.result) {
+        vector<PatternInstance> local_pis;
+        p.instantiate(local_pis);
+        for (auto pi : local_pis)
+          if (i - 1 + rand() % 100 * 0.01 < pi_depth)
+            pis.push_back(pi);
+      }
     }
     generate_pseudo_pis(pis);
-    cerr << pis.size() << " pattern instances" << endl;
+    cerr << "# dict(num_pis=" << pis.size() << ") #" << endl;
 
     State state;
     state.score = 0;
