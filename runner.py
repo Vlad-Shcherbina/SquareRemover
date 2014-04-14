@@ -16,6 +16,7 @@ def run_solution(command, seed):
 
         out, err = p.communicate()
         out = out.decode('ascii')
+        err = err.decode('ascii')
 
         p.wait()
         assert p.returncode == 0
@@ -50,7 +51,7 @@ def run_solution(command, seed):
             data_points=data_points,
             time=default_timer() - start)
     except Exception as e:
-        raise Exception('seed={}, out={}'.format(seed, out)) from e
+        raise Exception('seed={}, out={}, err={}'.format(seed, out, err)) from e
 
 
 def grouping_task(seed):
