@@ -29,7 +29,7 @@ class Distribution(object):
             return 0
         mean = self.mean()
         return sqrt(
-            (self.sum2 - 2*mean*self.sum + mean*mean*self.n) / (self.n - 1))
+            (self.sum2 - 2*mean*self.sum + mean*mean*self.n + 1e-10) / (self.n - 1))
 
     def to_html(self):
         if self.n == 0:
@@ -48,6 +48,7 @@ class Distribution(object):
             return 0.5
         diff_mean = self.mean() - other.mean()
         diff_sigma = sqrt(self.sigma()**2 + other.sigma()**2)
+        #diff_sigma *= 2  # arbitrary factor to reduce noise
         if diff_sigma == 0:
             if diff_mean > 0:
                 return 1
@@ -122,7 +123,10 @@ def render_table(results, baseline_results):
                     continue
                 filtered_baseline_results.append(result)
 
-            fout.write('<td align="right">')
+            if colors is None or n is None:
+                fout.write('<td align="right" bgcolor=#eee>')
+            else:
+                fout.write('<td align="right">')
             fout.write(render_cell(filtered_results, filtered_baseline_results))
             fout.write('</td>')
 
