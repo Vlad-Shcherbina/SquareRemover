@@ -14,7 +14,7 @@
 
 using namespace std;
 
-double TIME_LIMIT = 27.0;
+double TIME_LIMIT = 29.4;
 const int NUM_MOVES = 10000;
 int n = -1;
 vector<int> buffer;
