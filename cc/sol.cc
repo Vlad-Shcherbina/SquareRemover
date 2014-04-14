@@ -334,8 +334,8 @@ public:
 
     state.make_move(-1, global_undoer);
 
-    vector<vector<Step>> beam_steps(NUM_MOVES + 10);
-    vector<vector<State>> beam_states(NUM_MOVES + 10);
+    vector<vector<Step>> beam_steps(NUM_MOVES + 1);
+    vector<vector<State>> beam_states(NUM_MOVES + 1);
     beam_states[0].push_back(state);
     Step start_step;
     start_step.score = 0.0;
@@ -352,13 +352,13 @@ public:
 
       int recommended_beam_widht = 10;
       double t = get_time() - t0;
-      if (t > 0.1) {
+      if (t > 0.02) {
         recommended_beam_widht = rand() % 10 * 0.1 + 1.0 *
             beam_area * (start + TIME_LIMIT - t - t0) / t / (NUM_MOVES - stage);
         if (stage < 50 || stage % 500 == 0) {
           cerr << stage << " beam width " << recommended_beam_widht << endl;
         }
-        recommended_beam_widht = min(max(1, recommended_beam_widht), 100);
+        recommended_beam_widht = min(max(1, recommended_beam_widht), 200);
       }
 
       for (int i = 0; i < beam_steps[stage].size(); i++) {
@@ -384,11 +384,11 @@ public:
             new_step.prev_step_index = i;
 
             int new_stage = stage + pi.moves.size();
+            if (new_stage > NUM_MOVES)
+              continue;
             int beam_width = recommended_beam_widht;
             if (new_stage == NUM_MOVES)
               beam_width = 1;
-            else if (new_stage > NUM_MOVES)
-              beam_width = 0;
             insert_new_step(
                 new_step, state, beam_steps[new_stage], beam_states[new_stage],
                 beam_width);
