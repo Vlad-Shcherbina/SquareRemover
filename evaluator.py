@@ -18,7 +18,7 @@ def main():
 
     types = [(n, colors) for colors in (4, 5, 6) for n in range(8, 16 + 1)]
 
-    tasks = [(command, by_problem_type[t][i]) for t in types for i in range(2)]
+    tasks = [(command, by_problem_type[t][i]) for i in range(3) for t in types]
 
     map = multiprocessing.Pool(5).imap
 
