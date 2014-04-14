@@ -22,7 +22,8 @@ def index():
 def list_runs():
     return flask.render_template(
         'list_runs.html',
-        runs=run_db.get_all_runs())
+        runs=run_db.get_all_runs(),
+        baseline_id=flask.request.args.get('baseline_id'))
 
 
 @web_app.route('/run_details')
@@ -30,9 +31,18 @@ def run_details():
     args = flask.request.args
     id = args['id']
     run = run_db.Run(id)
+
+    baseline_id = args.get('baseline_id')
+
+    if baseline_id:
+        baseline_run = run_db.Run(baseline_id)
+        baseline_results = baseline_run.results
+    else:
+        baseline_results = []
+
     return flask.render_template(
         'run_details.html',
-        table=render.render_table(run.results),  # TODO: untangle
+        table=render.render_table(run.results, baseline_results),  # TODO: untangle
         run=run,
         debug=pprint.pformat((run.attrs, run.results)))
 

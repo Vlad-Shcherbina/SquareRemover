@@ -7,7 +7,7 @@
 {% for run in runs %}
 <tr>
   <td align="left">
-    <a href="{{ url_for('run_details') }}?id={{ run.id }}">
+    <a href="{{ url_for('run_details') }}?id={{ run.id }}{% if baseline_id %}&baseline_id={{baseline_id  }}{% endif %}">
       {{ run.id }}</a>
   </td>
   <td align="left">
@@ -26,6 +26,11 @@
     {% endif %}
     {{ run.attrs.num_runs }} results
   </td>
+  {% if run.id != baseline_id %}
+  <td>
+  <a href="{{ url_for('list_runs') }}?baseline_id={{ run.id }}">set as baseline</a>
+  </td>
+  {% endif %}
 </tr>
 {% endfor%}
 </table>
