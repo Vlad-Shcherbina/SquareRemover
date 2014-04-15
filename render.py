@@ -1,5 +1,5 @@
 from __future__ import division
-from math import sqrt, erf
+from math import sqrt, erf, log
 import StringIO
 import collections
 
@@ -28,13 +28,15 @@ class Distribution(object):
         if self.n < 2:
             return 0
         mean = self.mean()
-        return sqrt(
-            (self.sum2 - 2*mean*self.sum + mean*mean*self.n + 1e-10) / (self.n - 1))
+        sigma2 = (self.sum2 - 2*mean*self.sum + mean*mean*self.n) / (self.n - 1)
+        if sigma2 < 0:  # numerical errors
+            sigma2 = 0
+        return sqrt(sigma2)
 
     def to_html(self):
         if self.n == 0:
             return '--'
-        if self.sigma() == 0:
+        if self.sigma() < 1e-10:
             return str(self.mean())
         return \
             '<span title="{}..{}">{:.3f} &plusmn; <i>{:.3f}</i></span>'.format(
@@ -77,7 +79,7 @@ def aggregate_stats(results):
             for k, v in dp.items():
                 if k != 'type':
                     stats[k].add_value(v)
-        stats['score'].add_value(result['score'])
+        stats['log_score'].add_value(log(result['score']))
     return stats
 
 
@@ -96,13 +98,13 @@ def render_cell(results, baseline_results):
     stats = aggregate_stats(results)
     baseline_stats = aggregate_stats(baseline_results)
 
-    color = color_prob(stats['score'].prob_mean_larger(baseline_stats['score']))
+    color = color_prob(stats['log_score'].prob_mean_larger(baseline_stats['log_score']))
     fout.write(
         '<span style="font-size:125%; font-weight:bold; color:{}">'
-        'score = {}</span>'.format(
-        color, stats['score'].to_html()))
+        'log_score = {}</span>'.format(
+        color, stats['log_score'].to_html()))
     for k, v in sorted(stats.items()):
-        if k != 'score':
+        if k != 'log_score':
             color = color_prob(v.prob_mean_larger(baseline_stats[k]))
             fout.write('<br>{} = <span style="color:{}">{}</span>'.format(
                 k, color, v.to_html()))
