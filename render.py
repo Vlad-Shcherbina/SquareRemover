@@ -47,8 +47,18 @@ class Distribution(object):
         if self.n == 0 or other.n == 0:
             return 0.5
         diff_mean = self.mean() - other.mean()
-        diff_sigma = sqrt(self.sigma()**2 + other.sigma()**2)
-        #diff_sigma *= 2  # arbitrary factor to reduce noise
+
+        sigma1 = self.sigma()
+        sigma2 = other.sigma()
+        # If we have no data about variance of one of the distributions,
+        # we take it from another distribution.
+        if other.n == 1:
+            sigma2 = sigma1
+        if self.n == 1:
+            sigma1 = sigma2
+
+        diff_sigma = sqrt(sigma1**2 + sigma2**2)
+
         if diff_sigma == 0:
             if diff_mean > 0:
                 return 1
