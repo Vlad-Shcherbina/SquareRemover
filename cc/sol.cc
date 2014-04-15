@@ -381,8 +381,18 @@ public:
               had_proper_pis = true;
 
             Undoer u(state);
-            for (auto m : pi.moves)
-              state.make_move(m, u);
+
+            bool precollapse = false;
+            for (int i = 0; i < pi.moves.size(); i++) {
+              if (state.score > u.score) {
+                precollapse = true;
+                break;
+              }
+              state.make_move(pi.moves[i], u);
+            }
+            if (precollapse)
+              continue;
+
             Step new_step;
             float conn_weight = scarce ? 0.001 : 0.2;
             if (had_proper_pis)
