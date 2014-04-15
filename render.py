@@ -87,7 +87,9 @@ def render_cell(results, baseline_results):
     baseline_stats = aggregate_stats(baseline_results)
 
     color = color_prob(stats['score'].prob_mean_larger(baseline_stats['score']))
-    fout.write('<b style="color:{}">score = {}</b>'.format(
+    fout.write(
+        '<span style="font-size:125%; font-weight:bold; color:{}">'
+        'score = {}</span>'.format(
         color, stats['score'].to_html()))
     for k, v in sorted(stats.items()):
         if k != 'score':
