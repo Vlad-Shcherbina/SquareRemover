@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <algorithm>
 #include <iterator>
+#include <utility>
 #include <inttypes.h>
 #include <sys/time.h>
 
@@ -104,26 +105,29 @@ struct State {
     if (cells[idx] == color)
       return;
     char *p = &cells[idx];
-    if (p[0] == p[1])
+    char old_color = p[0];
+
+    if (old_color == p[1])
       connections--;
-    if (p[0] == p[-1])
+    else if (color == p[1])
+      connections++;
+
+    if (old_color == p[-1])
       connections--;
-    if (p[0] == p[n])
+    else if (color == p[-1])
+      connections++;
+
+    if (old_color == p[n])
       connections--;
-    if (p[0] == p[-n])
+    else if (color == p[n])
+      connections++;
+
+    if (old_color == p[-n])
       connections--;
+    else if (color == p[-n])
+      connections++;
 
     p[0] = color;
-
-    if (p[0] == p[1])
-      connections++;
-    if (p[0] == p[-1])
-      connections++;
-    if (p[0] == p[n])
-      connections++;
-    if (p[0] == p[-n])
-      connections++;
-
     //assert(connections == naive_connections());
   }
 
@@ -299,7 +303,7 @@ public:
       pi_depth = board.size() == 8 ? 2.75 : 2.5;
     cerr << "# dict(pi_depth=" << pi_depth << ") #" << endl;
 
-    vector<PatternInstance> pis;
+    map<pair<int, int>, vector<PatternInstance>> pis_by_link;
     for (int i = 1; i < pi_depth + 1; i++) {
       PatternGenerator pg;
       pg.generate(i);
@@ -309,11 +313,20 @@ public:
         p.instantiate(local_pis);
         for (auto pi : local_pis)
           if (i - 1 + rand() % 100 * 0.01 < pi_depth)
-            pis.push_back(pi);
+            pis_by_link[make_pair(pi.idxs[0], pi.idxs[3])].push_back(pi);
       }
     }
-    generate_pseudo_pis(pis);
-    cerr << "# dict(num_pis=" << pis.size() << ") #" << endl;
+
+    vector<pair<pair<int, int>, vector<PatternInstance>>> link_pis(
+      pis_by_link.begin(), pis_by_link.end());
+    link_pis.push_back(make_pair(make_pair(0, 0), vector<PatternInstance>()));
+    generate_pseudo_pis(link_pis.back().second);
+
+    int num_pis = 0;
+    for (const auto &link_pi : link_pis)
+      num_pis += link_pi.second.size();
+    cerr << "# dict(num_pis=" << num_pis << ") #" << endl;
+    cerr << "# dict(num_pi_clusters=" << link_pis.size() << ") #" << endl;
 
     State state;
     state.score = 0;
@@ -354,6 +367,9 @@ public:
 
     int beam_area = 0;
 
+    int64_t pi_tried = 0;
+    int64_t pi_matched = 0;
+
     double t0 = get_time();
     for (int stage = 0; stage < NUM_MOVES; stage++) {
       assert(beam_steps[stage].size() == beam_states[stage].size());
@@ -373,10 +389,17 @@ public:
         beam_area++;
         State state = beam_states[stage][beam_steps[stage][i].state_index];
         bool had_proper_pis = false;
-        for (const auto &pi : pis) {
-          if (had_proper_pis && pi.is_pseudo())
+        for (const auto &link_pi : link_pis) {
+          if (had_proper_pis && link_pi.second.front().is_pseudo())
             continue;
-          if (pi.match(state)) {
+          auto idxs = link_pi.first;
+          if (state.cells[idxs.first] != state.cells[idxs.second])
+            continue;
+          for (const auto &pi : link_pi.second) {
+            pi_tried++;
+            if (!pi.match(state))
+              continue;
+            pi_matched++;
             if (!pi.is_pseudo())
               had_proper_pis = true;
 
@@ -415,6 +438,8 @@ public:
         }
       }
     }
+    cerr << "# dict(pi_matched=" << 100.0 * pi_matched / pi_tried << ") #" << endl;
+
     cerr << "# dict(beam_area=" << beam_area << ") #" << endl;
     cerr << "best results:" << endl;
     for (auto step : beam_steps[NUM_MOVES]) {
