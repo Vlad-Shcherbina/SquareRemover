@@ -394,7 +394,7 @@ public:
               continue;
 
             Step new_step;
-            float conn_weight = scarce ? 0.001 : 0.2;
+            float conn_weight = scarce ? 0.001 : 0.15;
             if (had_proper_pis)
               new_step.score = state.score + conn_weight * state.connections;
             else
