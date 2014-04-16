@@ -1,3 +1,9 @@
+#ifdef SUBMISSION
+double TIME_LIMIT = 29.4;
+#else
+double TIME_LIMIT = 10.0;
+#endif
+
 #include <cassert>
 #include <iostream>
 #include <string>
@@ -15,7 +21,6 @@
 
 using namespace std;
 
-double TIME_LIMIT = 29.4;
 const int NUM_MOVES = 10000;
 int n = -1;
 vector<int> buffer;
@@ -291,17 +296,25 @@ void insert_new_step(
 }
 
 
+vector<string> args;
+
 class SquareRemover{
 public:
   vector<int> playIt(int colors, vector<string> board, int start_seed) {
     double start = get_time();
     ::n = board.size() + 2;
 
+    cerr << "args: " << args << endl;
+
     bool scarce = colors == 6 && board.size() <= 12;
     float pi_depth = 2;
     if (scarce)
       pi_depth = board.size() == 8 ? 2.75 : 2.5;
+    if (args.size() > 0) {
+      pi_depth = stod(args[0]);
+    }
     cerr << "# dict(pi_depth=" << pi_depth << ") #" << endl;
+
 
     map<pair<int, int>, vector<PatternInstance>> pis_by_link;
     for (int i = 1; i < pi_depth + 1; i++) {
@@ -312,7 +325,7 @@ public:
         vector<PatternInstance> local_pis;
         p.instantiate(local_pis);
         for (auto pi : local_pis)
-          if (i - 1 + rand() % 100 * 0.01 < pi_depth)
+          if (i - 1 + rand() % 128 / 128.0 < pi_depth)
             pis_by_link[make_pair(pi.idxs[0], pi.idxs[3])].push_back(pi);
       }
     }
@@ -376,13 +389,13 @@ public:
 
       int recommended_beam_widht = 10;
       double t = get_time() - t0;
-      if (t > 0.02) {
+      if (t > 0.005) {
         recommended_beam_widht = rand() % 10 * 0.1 + 1.0 *
             beam_area * (start + TIME_LIMIT - t - t0) / t / (NUM_MOVES - stage);
         if (stage < 50 || stage % 500 == 0) {
           cerr << stage << " beam width " << recommended_beam_widht << endl;
         }
-        recommended_beam_widht = min(max(1, recommended_beam_widht), 200);
+        recommended_beam_widht = min(max(1, recommended_beam_widht), 1000);
       }
 
       for (int i = 0; i < beam_steps[stage].size(); i++) {
@@ -441,6 +454,7 @@ public:
     cerr << "# dict(pi_matched=" << 100.0 * pi_matched / pi_tried << ") #" << endl;
 
     cerr << "# dict(beam_area=" << beam_area << ") #" << endl;
+    assert(beam_steps[NUM_MOVES].size() > 0);
     cerr << "best results:" << endl;
     for (auto step : beam_steps[NUM_MOVES]) {
       cerr << step.score << endl;
@@ -478,8 +492,12 @@ public:
 };
 
 
+#ifndef SUBMISSION
 int main(int argc, char *argv[]) {
   int colors, n, start_seed;
+
+  ::args = vector<string>(argv + 1, argv + argc);
+
   cin >> colors;
   cin >> n;
   cerr << "# dict(type='size', n=" << n << ", colors=" << colors << ") #" << endl;
@@ -496,3 +514,4 @@ int main(int argc, char *argv[]) {
 
   return 0;
 }
+#endif
