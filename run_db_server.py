@@ -44,7 +44,7 @@ def run_details():
         'run_details.html',
         table=render.render_table(run.results, baseline_results),  # TODO: untangle
         run=run,
-        debug=pprint.pformat((run.attrs, run.results)))
+        debug=pprint.pformat(run.attrs))
 
 
 if __name__ == '__main__':

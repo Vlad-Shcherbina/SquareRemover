@@ -1,5 +1,5 @@
 from __future__ import division
-from math import sqrt, erf, log
+from math import sqrt, erf, log, exp
 import StringIO
 import collections
 
@@ -38,9 +38,11 @@ class Distribution(object):
             return '--'
         if self.sigma() < 1e-10:
             return str(self.mean())
-        return \
-            '<span title="{}..{}">{:.3f} &plusmn; <i>{:.3f}</i></span>'.format(
-                self.min, self.max, self.mean(), self.sigma())
+        return (
+            '<span title="{}..{}, {} items">'
+            '{:.3f} &plusmn; <i>{:.3f}</i>'
+            '</span>'.format(
+                self.min, self.max, self.n, self.mean(), self.sigma()))
 
     def prob_mean_larger(self, other):
         """
@@ -101,13 +103,17 @@ def render_cell(results, baseline_results):
     color = color_prob(stats['log_score'].prob_mean_larger(baseline_stats['log_score']))
     fout.write(
         '<span style="font-size:125%; font-weight:bold; color:{}">'
+        'score = {}<br>'
         'log_score = {}</span>'.format(
-        color, stats['log_score'].to_html()))
+        color, exp(stats['log_score'].mean()), stats['log_score'].to_html()))
     for k, v in sorted(stats.items()):
         if k != 'log_score':
-            color = color_prob(v.prob_mean_larger(baseline_stats[k]))
-            fout.write('<br>{} = <span style="color:{}">{}</span>'.format(
-                k, color, v.to_html()))
+            if isinstance(v, Distribution):
+                color = color_prob(v.prob_mean_larger(baseline_stats[k]))
+                fout.write('<br>{} = <span style="color:{}">{}</span>'.format(
+                    k, color, v.to_html()))
+            else:
+                fout.write('<br>{} = {}'.format(k, v))
     return fout.getvalue()
 
 
