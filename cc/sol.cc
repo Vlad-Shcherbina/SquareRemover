@@ -306,15 +306,24 @@ public:
 
     cerr << "args: " << args << endl;
 
+    int problem_type = colors - 4 + 3 * (board.size() - 8);
+    float pi_depths[] = {
+      2.0, 2.0, 2.8,
+      2.0, 2.0, 2.7,
+      2.0, 2.0, 2.3,
+      2.0, 2.0, 2.2,
+      2.0, 2.0, 2.1,
+      2.0, 2.0, 2.0,
+      2.0, 2.0, 2.0,
+      2.0, 2.0, 2.0,
+      2.0, 2.0, 2.0,
+    };
     bool scarce = colors == 6 && board.size() <= 12;
-    float pi_depth = 2;
-    if (scarce)
-      pi_depth = board.size() == 8 ? 2.75 : 2.5;
+    float pi_depth = pi_depths[problem_type];
     if (args.size() > 0) {
       pi_depth = stod(args[0]);
     }
     cerr << "# dict(pi_depth=" << pi_depth << ") #" << endl;
-
 
     map<pair<int, int>, vector<PatternInstance>> pis_by_link;
     for (int i = 1; i < pi_depth + 1; i++) {
