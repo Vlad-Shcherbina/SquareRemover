@@ -64,6 +64,7 @@ struct State {
   vector<char> cells;
   int score;
   int connections;
+  int fingerprint;
 
   friend std::ostream& operator<<(std::ostream &out, const State &s);
 
@@ -154,11 +155,13 @@ struct Undoer {
   State *state;
   int score;
   int connections;
+  int fingerprint;
   vector<int> change_history;
 
   Undoer(State &state) : state(&state) {
     score = state.score;
     connections = state.connections;
+    fingerprint = state.fingerprint;
   }
 
   void record_two_changes(int idx1, int value1, int idx2, int value2) {
@@ -185,6 +188,7 @@ struct Undoer {
     }
     state->score = score;
     state->connections = connections;
+    state->fingerprint = fingerprint;
   }
 };
 
@@ -247,6 +251,7 @@ void State::make_move(Move move, Undoer &undoer) {
     assign(idx + n, buf[2]);
     assign(idx + n + 1, buf[3]);
     score += 1;
+    fingerprint = idx + score * 500;
 
     if (i1 > 1) i1--;
     if (j1 > 1) j1--;
@@ -261,6 +266,7 @@ void State::make_move(Move move, Undoer &undoer) {
 
 struct Step {
   float score;
+  int fingerprint;
   int state_index;
   const PatternInstance *pi;
   int prev_step_index;
@@ -278,8 +284,24 @@ void insert_new_step(
     bool operator()(const Step &s1, const Step &s2) const {
       return s1.score > s2.score;
     }
-  };
-  auto insert_point = upper_bound(steps.begin(), steps.end(), new_step, Comp());
+  } cmp;
+
+  // Do not allow two steps with the same fingerprint.
+  for (auto p = steps.begin(); p != steps.end(); p++) {
+    if (p->fingerprint == new_step.fingerprint) {
+      if (!cmp(new_step, *p))
+        return;
+      int t = p->state_index;
+      auto insert_point = upper_bound(steps.begin(), p, new_step, cmp);
+      copy_backward(insert_point, p, p + 1);
+      *insert_point = new_step;
+      insert_point->state_index = t;
+      states[t] = new_state;
+      return;
+    }
+  }
+
+  auto insert_point = upper_bound(steps.begin(), steps.end(), new_step, cmp);
 
   if (steps.size() < beam_width) {
     steps.insert(insert_point, new_step)->state_index = states.size();
@@ -351,6 +373,7 @@ public:
     cerr << "# dict(num_pi_clusters=" << link_pis.size() << ") #" << endl;
 
     State state;
+    state.fingerprint = 0;
     state.score = 0;
     state.cells = vector<char>(n, 9);
 
@@ -444,6 +467,7 @@ public:
               new_step.score = state.score + conn_weight * state.connections;
             else
               new_step.score = state.score + rand() % 1000 * 0.001;
+            new_step.fingerprint = state.fingerprint;
             new_step.pi = &pi;
             new_step.prev_step_index = i;
 
