@@ -1,7 +1,7 @@
 #ifdef SUBMISSION
 double TIME_LIMIT = 29.4;
 #else
-double TIME_LIMIT = 10.0;
+double TIME_LIMIT = 13.0;
 #endif
 
 #include <cassert>
@@ -541,6 +541,7 @@ public:
           }
         }
       }
+      beam_states[stage].clear();
     }
     cerr << "# dict(pi_matched=" << 100.0 * pi_matched / pi_tried << ") #" << endl;
 

@@ -48,10 +48,10 @@ class Optimizer(object):
             if a in self.cache:
                 continue
             if random.random() * (
-                abs(a[0] - best[0]) +
-                abs(a[1] - best[1]) +
-                abs(a[2] - best[2])
-                ) < 0.01:
+                abs(a[0] - best[0])**2 +
+                abs(a[1] - best[1])**2 +
+                abs(a[2] - best[2])**2
+                ) < 0.001:
                 return a
 
 
