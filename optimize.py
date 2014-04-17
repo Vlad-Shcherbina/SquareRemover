@@ -40,15 +40,17 @@ class Optimizer(object):
         if self.cache:
             best = max(self.cache, key=self.cache.get)
         else:
-            best = (2.0, 0.15)
+            best = (2.0, 0.1, 0.05)
         while True:
-            a = (random.randrange(int(1.5 * 16), int(3.5) * 16 + 1) / 16.0,
-                 random.randrange(16) / 32.0)
+            a = (random.randrange(int(1.0 * 16), int(3.1) * 16 + 1) / 16.0,
+                 random.randrange(32) / 64.0,
+                 random.randrange(32) / 64.0,)
             if a in self.cache:
                 continue
             if random.random() * (
                 abs(a[0] - best[0]) +
-                abs(a[1] - best[1])
+                abs(a[1] - best[1]) +
+                abs(a[2] - best[2])
                 ) < 0.01:
                 return a
 
@@ -78,7 +80,7 @@ def main():
             print('    ', a, opt.measure(a))
 
         print('optimal:')
-        for idx in range(2):
+        for idx in range(len(a)):
             for i in range(0, len(opts), 3):
                 for opt in opts[i:i + 3]:
                     if opt.cache:
