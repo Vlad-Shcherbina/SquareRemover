@@ -6,6 +6,7 @@ double TIME_LIMIT = 10.0;
 
 #include <cassert>
 #include <iostream>
+#include <fstream>
 #include <string>
 #include <vector>
 #include <map>
@@ -355,15 +356,15 @@ public:
     int problem_type = colors - 4 + 3 * (board.size() - 8);
 
     float pi_depths[] = {
-      2.0, 2.125, 3.0,
-      2.0, 2.0, 2.3125,
-      2.0, 2.0, 2.0,
-      1.75, 2.0, 2.0,
-      1.5625, 2.0, 2.0,
-      1.6875, 2.0, 2.0,
-      1.5625, 1.9375, 2.0,
-      1.5, 2.0, 2.0,
-      1.5625, 2.0, 2.0
+      2.0, 2.4375, 2.6875,
+      1.9375, 2.0, 2.0625,
+      1.125, 2.0, 2.0625,
+      1.0625, 1.8125, 2.0,
+      1.5, 2.0, 1.8125,
+      1.25, 1.8125, 1.875,
+      1.625, 1.5, 1.9375,
+      1.0, 1.5625, 2.0,
+      1.625, 1.3125, 1.5625
     };
     float pi_depth = pi_depths[problem_type];
     if (args.size() > 0) {
@@ -372,22 +373,33 @@ public:
     cerr << "# dict(pi_depth=" << pi_depth << ") #" << endl;
 
     float conn_weights[] = {
-      0.25, 0.125, 0.03125,
-      0.1875, 0.1875, 0.09375,
-      0.1875, 0.15625, 0.21875,
-      0.15625, 0.1875, 0.1875,
-      0.15625, 0.15625, 0.15625,
-      0.1875, 0.15625, 0.15625,
-      0.21875, 0.15625, 0.1875,
-      0.15625, 0.1875, 0.15625,
-      0.1875, 0.15625, 0.15625
+      0.171875, 0.1875, 0.15625,
+      0.203125, 0.21875, 0.109375,
+      0.25, 0.109375, 0.203125,
+      0.1875, 0.1875, 0.125,
+      0.28125, 0.25, 0.1875,
+      0.25, 0.21875, 0.21875,
+      0.234375, 0.25, 0.1875,
+      0.21875, 0.15625, 0.171875,
+      0.21875, 0.1875, 0.1875
     };
-    float conn_weight = 0.66 * conn_weights[problem_type];
+    float conn_weight = conn_weights[problem_type];
     if (args.size() > 1) {
       conn_weight = stod(args[1]);
     }
 
-    float diag_conn_weight = 0.33 * conn_weights[problem_type];
+    float diag_conn_weights[] = {
+      0.078125, 0.15625, 0.171875,
+      0.1875, 0.109375, 0.21875,
+      0.140625, 0.078125, 0.171875,
+      0.171875, 0.140625, 0.109375,
+      0.140625, 0.21875, 0.1875,
+      0.140625, 0.1875, 0.3125,
+      0.171875, 0.171875, 0.21875,
+      0.109375, 0.203125, 0.203125,
+      0.21875, 0.1875, 0.171875
+    };
+    float diag_conn_weight = diag_conn_weights[problem_type];
     if (args.size() > 2) {
       diag_conn_weight = stod(args[2]);
     }
@@ -538,6 +550,16 @@ public:
     for (auto step : beam_steps[NUM_MOVES]) {
       cerr << step.score << endl;
     }
+
+    /*ofstream fout("beam.txt");
+    for (int i = 1000; i < 1000 + 30; i++) {
+      for (int j = 0; j < beam_steps[i].size(); j++) {
+        const Step &step = beam_steps[i][j];
+        fout << i << " " << j << " "
+             << i - step.pi->moves.size() << " " << step.prev_step_index
+             << endl;
+      }
+    }*/
 
     vector<Move> best_moves;
     int stage = NUM_MOVES;
