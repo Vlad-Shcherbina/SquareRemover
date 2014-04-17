@@ -64,6 +64,7 @@ struct State {
   vector<char> cells;
   int score;
   int connections;
+  int diag_connections;
   int fingerprint;
 
   friend std::ostream& operator<<(std::ostream &out, const State &s);
@@ -133,6 +134,26 @@ struct State {
     else if (color == p[-n])
       connections++;
 
+    if (old_color == p[1 + n])
+      diag_connections--;
+    else if (color == p[1 + n])
+      diag_connections++;
+
+    if (old_color == p[1 - n])
+      diag_connections--;
+    else if (color == p[1 - n])
+      diag_connections++;
+
+    if (old_color == p[-1 + n])
+      diag_connections--;
+    else if (color == p[-1 + n])
+      diag_connections++;
+
+    if (old_color == p[-1 - n])
+      diag_connections--;
+    else if (color == p[-1 - n])
+      diag_connections++;
+
     p[0] = color;
     //assert(connections == naive_connections());
   }
@@ -155,12 +176,14 @@ struct Undoer {
   State *state;
   int score;
   int connections;
+  int diag_connections;
   int fingerprint;
   vector<int> change_history;
 
   Undoer(State &state) : state(&state) {
     score = state.score;
     connections = state.connections;
+    diag_connections = state.diag_connections;
     fingerprint = state.fingerprint;
   }
 
@@ -188,6 +211,7 @@ struct Undoer {
     }
     state->score = score;
     state->connections = connections;
+    state->diag_connections = diag_connections;
     state->fingerprint = fingerprint;
   }
 };
@@ -358,9 +382,14 @@ public:
       0.15625, 0.1875, 0.15625,
       0.1875, 0.15625, 0.15625
     };
-    float conn_weight = conn_weights[problem_type];
+    float conn_weight = 0.66 * conn_weights[problem_type];
     if (args.size() > 1) {
       conn_weight = stod(args[1]);
+    }
+
+    float diag_conn_weight = 0.33 * conn_weights[problem_type];
+    if (args.size() > 2) {
+      diag_conn_weight = stod(args[2]);
     }
 
     map<pair<int, int>, vector<PatternInstance>> pis_by_link;
@@ -402,6 +431,7 @@ public:
     }
     fill_n(back_inserter(state.cells), n, 9);
     state.connections = state.naive_connections();
+    state.diag_connections = 0;  // for simplicity it's relative
 
     uint64_t a = start_seed;
     for (int i = 0; i < NUM_MOVES * 4 * 10; i++) {
@@ -481,6 +511,7 @@ public:
             new_step.score =
               state.score +
               conn_weight * state.connections +
+              diag_conn_weight * state.diag_connections +
               rand() % 1000 * 1e-6;
             new_step.fingerprint = state.fingerprint;
             new_step.pi = &pi;
