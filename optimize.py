@@ -20,7 +20,8 @@ class Optimizer(object):
 
     def measure(self, arg):
         assert arg not in self.cache
-        cmd = '{} {}'.format(self.command, arg)
+        #cmd = '{} {}'.format(self.command, arg)
+        cmd = ' '.join([self.command] + list(map(str, arg)))
         tasks = [(cmd, seed) for seed in self.seeds]
 
         try:
@@ -39,12 +40,16 @@ class Optimizer(object):
         if self.cache:
             best = max(self.cache, key=self.cache.get)
         else:
-            best = 2.0
+            best = (2.0, 0.15)
         while True:
-            a = random.randrange(int(1.5 * 16), int(3.5) * 16 + 1) / 16.0
+            a = (random.randrange(int(1.5 * 16), int(3.5) * 16 + 1) / 16.0,
+                 random.randrange(16) / 32.0)
             if a in self.cache:
                 continue
-            if random.random() * abs(a - best) < 0.01:
+            if random.random() * (
+                abs(a[0] - best[0]) +
+                abs(a[1] - best[1])
+                ) < 0.01:
                 return a
 
 
@@ -73,13 +78,15 @@ def main():
             print('    ', a, opt.measure(a))
 
         print('optimal:')
-        for i in range(0, len(opts), 3):
-            for opt in opts[i:i + 3]:
-                if opt.cache:
-                    print(max(opt.cache, key=opt.cache.get), end=', ')
-                else:
-                    print('--', end=', ')
-            print()
+        for idx in range(2):
+            for i in range(0, len(opts), 3):
+                for opt in opts[i:i + 3]:
+                    if opt.cache:
+                        print(max(opt.cache, key=opt.cache.get)[idx], end=', ')
+                    else:
+                        print('??', end=', ')
+                print()
+            print('---')
 
 
 if __name__ == '__main__':

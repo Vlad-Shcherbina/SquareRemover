@@ -329,23 +329,39 @@ public:
     cerr << "args: " << args << endl;
 
     int problem_type = colors - 4 + 3 * (board.size() - 8);
+
     float pi_depths[] = {
-      2.0, 2.0, 2.8,
-      2.0, 2.0, 2.7,
-      2.0, 2.0, 2.3,
-      2.0, 2.0, 2.2,
-      2.0, 2.0, 2.1,
+      2.0, 2.125, 3.0,
+      2.0, 2.0, 2.3125,
       2.0, 2.0, 2.0,
-      2.0, 2.0, 2.0,
-      2.0, 2.0, 2.0,
-      2.0, 2.0, 2.0,
+      1.75, 2.0, 2.0,
+      1.5625, 2.0, 2.0,
+      1.6875, 2.0, 2.0,
+      1.5625, 1.9375, 2.0,
+      1.5, 2.0, 2.0,
+      1.5625, 2.0, 2.0
     };
-    bool scarce = colors == 6 && board.size() <= 12;
     float pi_depth = pi_depths[problem_type];
     if (args.size() > 0) {
       pi_depth = stod(args[0]);
     }
     cerr << "# dict(pi_depth=" << pi_depth << ") #" << endl;
+
+    float conn_weights[] = {
+      0.25, 0.125, 0.03125,
+      0.1875, 0.1875, 0.09375,
+      0.1875, 0.15625, 0.21875,
+      0.15625, 0.1875, 0.1875,
+      0.15625, 0.15625, 0.15625,
+      0.1875, 0.15625, 0.15625,
+      0.21875, 0.15625, 0.1875,
+      0.15625, 0.1875, 0.15625,
+      0.1875, 0.15625, 0.15625
+    };
+    float conn_weight = conn_weights[problem_type];
+    if (args.size() > 1) {
+      conn_weight = stod(args[1]);
+    }
 
     map<pair<int, int>, vector<PatternInstance>> pis_by_link;
     for (int i = 1; i < pi_depth + 1; i++) {
@@ -462,11 +478,10 @@ public:
               continue;
 
             Step new_step;
-            float conn_weight = scarce ? 0.001 : 0.15;
-            if (had_proper_pis)
-              new_step.score = state.score + conn_weight * state.connections;
-            else
-              new_step.score = state.score + rand() % 1000 * 0.001;
+            new_step.score =
+              state.score +
+              conn_weight * state.connections +
+              rand() % 1000 * 1e-6;
             new_step.fingerprint = state.fingerprint;
             new_step.pi = &pi;
             new_step.prev_step_index = i;
