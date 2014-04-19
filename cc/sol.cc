@@ -289,7 +289,7 @@ void State::make_move(Move move, Undoer &undoer) {
     assign(idx + n + 1, buf[3]);
     score += 1;
 
-    fingerprint /= 2;
+    fingerprint -= fingerprint / 3;
     fingerprint ^= idx + score * 500;
 
     if (i1 > 1) i1--;
