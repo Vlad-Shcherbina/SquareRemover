@@ -159,6 +159,14 @@ struct State {
     //assert(connections == naive_connections());
   }
 
+  bool can_make_move(Move move) {
+    int idx = move & ~VERT;
+    if (move & VERT)
+      return cells[idx] != cells[idx + n];
+    else
+      return cells[idx] != cells[idx + 1];
+  }
+
   void make_move(Move move, Undoer &undoer);
 };
 
@@ -244,6 +252,9 @@ void State::make_move(Move move, Undoer &undoer) {
       j1 = idx % n - 1;
       i2 = i1 + 4;
       j2 = j1 + 3;
+      // It helps a little bit (~0.3%), but I don't know why, so
+      // I'm commenting it for now.
+      // fingerprint += idx * 7;
     } else {
       if (cells[idx - 1] != cells[idx] &&
           cells[idx] != cells[idx + 1] &&
@@ -253,6 +264,7 @@ void State::make_move(Move move, Undoer &undoer) {
       j1 = idx % n - 1;
       i2 = i1 + 3;
       j2 = j1 + 4;
+      // fingerprint += idx * 13;
     }
   } else {
     i1 = j1 = 1;
@@ -276,7 +288,9 @@ void State::make_move(Move move, Undoer &undoer) {
     assign(idx + n, buf[2]);
     assign(idx + n + 1, buf[3]);
     score += 1;
-    fingerprint = idx + score * 500;
+
+    fingerprint /= 2;
+    fingerprint ^= idx + score * 500;
 
     if (i1 > 1) i1--;
     if (j1 > 1) j1--;
@@ -508,15 +522,15 @@ public:
 
             Undoer u(state);
 
-            bool precollapse = false;
+            bool bad = false;
             for (int i = 0; i < pi.moves.size(); i++) {
-              if (state.score > u.score) {
-                precollapse = true;
+              if (state.score > u.score || !state.can_make_move(pi.moves[i])) {
+                bad = true;
                 break;
               }
               state.make_move(pi.moves[i], u);
             }
-            if (precollapse)
+            if (bad)
               continue;
 
             Step new_step;
