@@ -1,0 +1,16 @@
+[{
+    "argv": [
+        "evaluator.py",
+        "./a.out"
+    ],
+    "branch": "master",
+    "commit": "a1272497d987e0e1833e2cce25de5665c4f187d8",
+    "commit_number": 57,
+    "clean": false,
+    "diff_stat": " optimize.py | 4 ++--\n 1 file changed, 2 insertions(+), 2 deletions(-)\n",
+    "num_runs": 0,
+    "start_time": 1398107710.146153,
+    "end_time": 1398107721.5459247,
+    "error": "Traceback (most recent call last):\n  File \"/usr/local/lib/python3.4/multiprocessing/pool.py\", line 663, in next\n    item = self._items.popleft()\nIndexError: pop from an empty deque\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"evaluator.py\", line 26, in main\n    for result in map(worker, tasks):\n  File \"/usr/local/lib/python3.4/multiprocessing/pool.py\", line 667, in next\n    self._cond.wait(timeout)\n  File \"/usr/local/lib/python3.4/threading.py\", line 290, in wait\n    waiter.acquire()\nKeyboardInterrupt\n"
+},
+[]]
